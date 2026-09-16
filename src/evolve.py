@@ -23,6 +23,10 @@ from snake_env import evaluate, N_INPUTS, N_OUTPUTS
 
 LAYER_SIZES = [N_INPUTS, 16, N_OUTPUTS]  # snake state -> turn-left/straight/turn-right
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CHECKPOINT = os.path.join(SCRIPT_DIR, "checkpoints", "best.npz")
+DEFAULT_LOG = os.path.join(SCRIPT_DIR, "checkpoints", "log.csv")
+
 
 def load_or_init_best(checkpoint_path: str, rng: np.random.Generator) -> Network:
     if os.path.exists(checkpoint_path):
@@ -40,9 +44,11 @@ def main():
     parser.add_argument("--sigma-decay", type=float, default=0.999, help="multiply sigma by this each generation")
     parser.add_argument("--min-sigma", type=float, default=0.02)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/best.npz")
-    parser.add_argument("--log", type=str, default="checkpoints/log.csv")
+    parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT)
+    parser.add_argument("--log", type=str, default=DEFAULT_LOG)
     args = parser.parse_args()
+    args.checkpoint = os.path.abspath(args.checkpoint)
+    args.log = os.path.abspath(args.log)
 
     os.makedirs(os.path.dirname(args.checkpoint) or ".", exist_ok=True)
     rng = np.random.default_rng(args.seed)

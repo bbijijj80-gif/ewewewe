@@ -17,7 +17,10 @@ import numpy as np
 import pygame
 
 from network import Network
-from snake_env import SnakeGame, GRID_SIZE, DIRECTIONS
+from snake_env import SnakeGame, GRID_SIZE, DIRECTIONS, N_INPUTS, N_OUTPUTS
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CHECKPOINT = os.path.join(SCRIPT_DIR, "checkpoints", "best.npz")
 
 CELL = 32
 MARGIN = 2
@@ -32,10 +35,15 @@ TEXT_COLOR = (230, 230, 230)
 def load_best(checkpoint_path: str, layer_sizes, rng):
     if os.path.exists(checkpoint_path):
         try:
-            return Network.load(checkpoint_path)
-        except Exception:
-            pass
-    return Network(layer_sizes, rng=rng)
+            net = Network.load(checkpoint_path)
+            print(f"[watch] loaded trained checkpoint: {checkpoint_path}")
+            return net, True
+        except Exception as exc:
+            print(f"[watch] found {checkpoint_path} but failed to load it ({exc}); using a random network")
+    else:
+        print(f"[watch] checkpoint not found at {checkpoint_path} -> playing with an UNTRAINED random network "
+              f"(make sure evolve.py is writing to this same path)")
+    return Network(layer_sizes, rng=rng), False
 
 
 def draw(screen, font, game: SnakeGame, generation_info: str):
@@ -54,7 +62,8 @@ def draw(screen, font, game: SnakeGame, generation_info: str):
         color = SNAKE_HEAD_COLOR if i == 0 else SNAKE_BODY_COLOR
         pygame.draw.rect(screen, color, (x * CELL, y * CELL, CELL - MARGIN, CELL - MARGIN))
 
-    hud = f"score: {game.score}   steps: {game.steps}   {generation_info}"
+    status = "TRAINED" if generation_info["trained"] else "UNTRAINED (random) - checkpoint not found yet"
+    hud = f"score: {game.score}   steps: {game.steps}   ep {generation_info['episode']}   [{status}]"
     text = font.render(hud, True, TEXT_COLOR)
     screen.blit(text, (8, size * CELL + 8))
 
@@ -63,12 +72,14 @@ def draw(screen, font, game: SnakeGame, generation_info: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Watch the current best snake AI play, live")
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/best.npz")
+    parser.add_argument("--checkpoint", type=str, default=DEFAULT_CHECKPOINT,
+                         help="path to the checkpoint written by evolve.py (must be the SAME path evolve.py uses)")
     parser.add_argument("--fps", type=int, default=12, help="game speed (steps per second)")
     parser.add_argument("--grid-size", type=int, default=GRID_SIZE)
     args = parser.parse_args()
+    args.checkpoint = os.path.abspath(args.checkpoint)
 
-    layer_sizes = [11, 16, 3]
+    layer_sizes = [N_INPUTS, 16, N_OUTPUTS]
     rng = np.random.default_rng()
 
     pygame.init()
@@ -80,7 +91,7 @@ def main():
 
     episode = 0
     last_mtime = None
-    network = load_best(args.checkpoint, layer_sizes, rng)
+    network, trained = load_best(args.checkpoint, layer_sizes, rng)
 
     running = True
     while running:
@@ -89,7 +100,7 @@ def main():
         if os.path.exists(args.checkpoint):
             mtime = os.path.getmtime(args.checkpoint)
             if mtime != last_mtime:
-                network = load_best(args.checkpoint, layer_sizes, rng)
+                network, trained = load_best(args.checkpoint, layer_sizes, rng)
                 last_mtime = mtime
 
         episode += 1
@@ -104,7 +115,7 @@ def main():
             action = int(np.argmax(out))
             game.step(action)
 
-            draw(screen, font, game, f"episode {episode}  |  checkpoint: {args.checkpoint}")
+            draw(screen, font, game, {"episode": episode, "trained": trained})
             clock.tick(args.fps)
 
         # brief pause between games so the final position is visible

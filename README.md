@@ -48,14 +48,21 @@ Useful `evolve.py` flags:
 - `--sigma X` — initial mutation strength.
 - `--sigma-decay X` — shrinks mutation strength over time (fine-tunes once
   close to a good solution).
-- `--checkpoint path.npz` — where the current best network is stored; delete
-  it to start over, or just re-run to resume from it.
+- `--checkpoint path.npz` — where the current best network is stored (by
+  default `src/checkpoints/best.npz`, regardless of which folder you run
+  the script from); delete it to start over, or just re-run to resume
+  from it.
 
 Useful `watch.py` flags:
 
 - `--fps N` — game speed (steps per second).
-- `--checkpoint path.npz` — which checkpoint to watch (must match the one
-  `evolve.py` is writing to).
+- `--checkpoint path.npz` — which checkpoint to watch. By default it points
+  at the same `src/checkpoints/best.npz` that `evolve.py` writes to by
+  default, so the two normally need no flags at all. If you pass
+  `--checkpoint` to `evolve.py`, pass the *same* path to `watch.py`,
+  otherwise it will play with an untrained random network — the window's
+  HUD always shows `[TRAINED]` or `[UNTRAINED]` so this is obvious at a
+  glance, and the terminal prints exactly which path it loaded.
 
 Progress (including every accepted/rejected mutation) is appended to
 `checkpoints/log.csv`.
