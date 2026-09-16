@@ -1,7 +1,8 @@
-# Self-improving agent (CPU-only)
+# Self-improving Snake AI (CPU-only)
 
-A small AI that improves itself through trial-and-error, no GPU required —
-only `numpy` running on CPU/RAM.
+A small AI that learns to play Snake by improving itself through
+trial-and-error — no GPU required, only `numpy` (and `pygame` for the
+live view) running on CPU/RAM.
 
 ## How it works
 
@@ -9,9 +10,8 @@ Each generation:
 
 1. **Mutate**: the current best network's weights get a small random
    perturbation, producing a *candidate*.
-2. **Test**: both the current best and the candidate are evaluated on the
-   same set of task episodes (balancing a cart-pole), so the comparison is
-   fair.
+2. **Test**: both the current best and the candidate play the same set of
+   Snake games (same seeds), so the comparison is fair.
 3. **Keep or rollback**:
    - If the candidate scores higher → it **replaces** the current best
      (saved to `checkpoints/best.npz`).
@@ -23,13 +23,25 @@ provably better, so its score never regresses.
 
 ## Usage
 
+Train (no window, runs in the terminal):
+
 ```bash
 pip install -r requirements.txt
 cd src
-python evolve.py --generations 500
+python evolve.py --generations 2000
 ```
 
-Useful flags:
+Watch it play, live, in its own window — run this at the same time (in
+another terminal) or after training. It reloads the checkpoint before every
+new game, so as soon as `evolve.py` saves an improved version, the window
+starts showing the smarter behaviour:
+
+```bash
+cd src
+python watch.py
+```
+
+Useful `evolve.py` flags:
 
 - `--episodes N` — how many seeds each candidate is tested on per generation
   (more = more reliable "better or not" judgement, slower).
@@ -39,16 +51,23 @@ Useful flags:
 - `--checkpoint path.npz` — where the current best network is stored; delete
   it to start over, or just re-run to resume from it.
 
+Useful `watch.py` flags:
+
+- `--fps N` — game speed (steps per second).
+- `--checkpoint path.npz` — which checkpoint to watch (must match the one
+  `evolve.py` is writing to).
+
 Progress (including every accepted/rejected mutation) is appended to
 `checkpoints/log.csv`.
 
 ## Task
 
-The network controls a simulated cart-pole (classic control problem,
-implemented from scratch — no external RL environment library). Its input
-is `[cart position, cart velocity, pole angle, pole angular velocity]` and
-its output picks push-left vs push-right. Fitness is the number of
-simulation steps (up to 500) the pole stays balanced.
+The network plays Snake on a 12x12 grid (implemented from scratch — no
+external game library). Its input is 11 features: danger straight/left/right
+ahead, current direction, and food direction relative to the head. Its
+output picks turn-left / go-straight / turn-right. Fitness heavily rewards
+eating food (score * 1000) plus a small bonus for steps survived, so the
+agent is pushed to actually hunt food rather than just avoid dying.
 
-Swap `src/environment.py` for a different task/fitness function to make the
+Swap `src/snake_env.py` for a different task/fitness function to make the
 same self-improvement loop optimize something else.

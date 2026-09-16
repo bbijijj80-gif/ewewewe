@@ -19,9 +19,9 @@ import time
 import numpy as np
 
 from network import Network
-from environment import evaluate
+from snake_env import evaluate, N_INPUTS, N_OUTPUTS
 
-LAYER_SIZES = [4, 8, 1]  # 4 inputs (cart-pole state), 1 output (action logit)
+LAYER_SIZES = [N_INPUTS, 16, N_OUTPUTS]  # snake state -> turn-left/straight/turn-right
 
 
 def load_or_init_best(checkpoint_path: str, rng: np.random.Generator) -> Network:
@@ -58,7 +58,7 @@ def main():
         writer.writerow(["generation", "best_fitness", "candidate_fitness", "accepted", "sigma", "timestamp"])
 
     sigma = args.sigma
-    print(f"starting fitness: {best_fitness:.1f} (max possible: 500.0)")
+    print(f"starting fitness: {best_fitness:.1f} (score*1000 + steps survived, up to 500)")
 
     try:
         for gen in range(1, args.generations + 1):
@@ -88,9 +88,6 @@ def main():
                 print(f"gen {gen:5d}  best={best_fitness:6.1f}  candidate={candidate_fitness:6.1f}  "
                       f"sigma={sigma:.4f}  [{status}]")
 
-            if best_fitness >= 500.0:
-                print(f"solved at generation {gen} (perfect score)")
-                break
     finally:
         log_file.close()
 
